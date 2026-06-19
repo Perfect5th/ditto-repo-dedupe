@@ -1,4 +1,4 @@
-// Package filesystem provides a content-addressable implementation of
+// Package filesystem provides a content-addressable implementation of)
 // ditto-repo's repo.FileSystem interface.
 //
 // ditto-repo writes every file by creating a temporary "<dest>.tmp" file and
@@ -149,7 +149,7 @@ func (a *AddressableFileSystem) intern(stagePath, storePath string) error {
 		return err
 	}
 	if err := os.Rename(stagePath, storePath); err != nil {
-		return fmt.Errorf("interning object: %w", err)
+		return fmt.Errorf("cannot intern object: %w", err)
 	}
 	return nil
 }

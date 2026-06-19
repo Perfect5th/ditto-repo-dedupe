@@ -1,4 +1,4 @@
-// Package filesystem provides a content-addressable implementation of)
+// Package filesystem provides a content-addressable implementation of
 // ditto-repo's repo.FileSystem interface.
 //
 // ditto-repo writes every file by creating a temporary "<dest>.tmp" file and
@@ -44,6 +44,42 @@ func New(storeDir string) *AddressableFileSystem {
 	return &AddressableFileSystem{
 		storeDir: storeDir,
 	}
+}
+
+// Downloader returns a repo.Downloader that deduplicates downloads against the
+// store. ditto-repo knows each package's SHA-256 from the Packages index and
+// passes it as expectedSHA256; since the store is keyed by that same hash, a
+// requested object that already exists can be linked into place instead of
+// being downloaded again. Anything not already present (or whose hash is
+// unknown, like metadata indices) is delegated to fallback.
+func (a *AddressableFileSystem) Downloader(fallback repo.Downloader) repo.Downloader {
+	return &addressableDownloader{fs: a, fallback: fallback}
+}
+
+// addressableDownloader is the repo.Downloader returned by
+// AddressableFileSystem.Downloader.
+type addressableDownloader struct {
+	fs       *AddressableFileSystem
+	fallback repo.Downloader
+}
+
+var _ repo.Downloader = (*addressableDownloader)(nil)
+
+// DownloadFile links destPath to an existing store object when one matching
+// expectedSHA256 is already present, avoiding the network entirely. Otherwise
+// it delegates to the fallback downloader, which writes through the
+// content-addressable FileSystem and so interns the freshly downloaded bytes.
+func (d *addressableDownloader) DownloadFile(urlStr, destPath, expectedSHA256 string) (string, error) {
+	if expectedSHA256 != "" {
+		storePath := d.fs.objectPath(expectedSHA256)
+		if _, err := os.Stat(storePath); err == nil {
+			if err := d.fs.linkInto(storePath, destPath); err != nil {
+				return "", err
+			}
+			return expectedSHA256, nil
+		}
+	}
+	return d.fallback.DownloadFile(urlStr, destPath, expectedSHA256)
 }
 
 // ReadFile reads the entire file at path, following symlinks into the store.

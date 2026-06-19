@@ -53,6 +53,10 @@ mirrors/
 
 The `content-addressable` directory sits above the individual mirror roots (`repo-a`, `repo-b`) so they can share it. It contains the actual files stored based on their hash values, while the `dists` and `pool` directories of each mirror contain symlinks to these files.
 
+### Download efficiency
+
+When downloading files from the source repository, the tool first checks if a file with the same content hash already exists in the content-addressable storage. If it does, it creates a symlink to the existing file instead of downloading it again. This can significantly reduce the amount of data that needs to be downloaded, especially when mirroring multiple repositories that may contain identical files.
+
 ### Implications
 
 This approach allows for significant storage savings when mirroring multiple repositories that may contain identical files. By storing files in a content-addressable manner, we can avoid storing duplicate files and instead reference them via symlinks or even hardlinks, resulting in a more efficient use of storage space.

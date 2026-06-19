@@ -49,14 +49,17 @@ func main() {
 
 	// Drive ditto-repo with a content-addressable FileSystem so that file
 	// contents are deduplicated into a single shared store and the dists/ and
-	// pool/ trees reference them via symlinks.
+	// pool/ trees reference them via symlinks. The matching Downloader skips
+	// re-fetching content that is already present in the store.
+	fsAdapter := filesystem.New(storeDir)
 	ditto := repo.NewDittoRepo(repo.DittoConfig{
 		RepoURLs:     []string{*source},
 		Dists:        []string{*dist},
 		Components:   []string{"main"},
 		Archs:        []string{*arch},
 		DownloadPath: *destination,
-		FileSystem:   filesystem.New(storeDir),
+		FileSystem:   fsAdapter,
+		Downloader:   fsAdapter.Downloader(repo.NewHTTPDownloader(fsAdapter)),
 	})
 
 	for update := range ditto.Mirror(context.Background()) {
